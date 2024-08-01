@@ -1,0 +1,41 @@
+services:
+  web:
+    image: "node:16"
+    container_name: solrquest_node
+    command: ["/app/front-end/front-end.sh"]
+    env_file: front-end/.env
+    ports:
+      - 3000:3000
+      - 9229:9229
+    depends_on:
+      - api
+    volumes:
+      - ./front-end:/app/front-end
+
+  api:
+    image: "python:3.10"
+    container_name: solrquest_api
+    command: ["/app/api/api.sh"]
+    env_file: api/.env
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ports:
+      - 8000:8000
+    volumes:
+      - ./api:/app/api
+
+  nginx:
+    image: nginx:alpine
+    container_name: solrquest_nginx
+    ports:
+      - 80:80
+    depends_on:
+      - web
+      - api
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/nginx.conf

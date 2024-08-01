@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="us-en">
+
+<head>
+  <title>SolrQuest</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css"
+    integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+</head>
+
+<body>
+  <div id="root"></div>
+</body>
+<!-- This setup is not suitable for production. -->
+<!-- Only use for development! -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script async src="https://ga.jspm.io/npm:es-module-shims@1.7.0/dist/es-module-shims.js"></script>
+<script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react?dev",
+      "react-dom/client": "https://esm.sh/react-dom/client?dev",
+      "react-spinners": "https://esm.sh/react-spinners"
+    }
+  }
+  </script>
+
+<script type="text/babel" data-type="module">
+  import React, { StrictMode, useState } from 'react';
+  import { createRoot } from 'react-dom/client';
+  import { GridLoader } from 'react-spinners';
+
+  function App() {
+    const [formData, setFormData] = useState({ text: '' });
+    const [responseData, setResponseData] = useState(null);
+    const [error, setError] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const Loader = () => {
+      return (
+        <GridLoader color={'#ccc'} size={30} />
+      );
+    };
+
+    const handleChange = (event) => {
+      setFormData({ ...formData, text: event.target.value });
+    };
+
+    const handleSubmit = async (event) => {
+      event.preventDefault();
+      setIsLoading(true);
+
+      try {
+        const response = await fetch('/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error: ${response.statusText}`);
+        }
+
+        // Handle successful response here (e.g., clear form, show success message)
+        const data = await response.json();
+        setResponseData(data);
+        setError(null);
+
+        console.log('Form submitted successfully!');
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        // Handle errors here (e.g., display error message to user)
+        setError(error.message);
+        setResponseData(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const renderTableData = () => {
+      if (!responseData || responseData.length == 0) return null;
+
+      const tableHeaders = Object.keys(responseData[0]);
+      const tableRows = responseData;
+
+      return (
+        <table className="table">
+          <thead className="thead">
+            <tr>
+              {tableHeaders.map((header) => (
+                <th scope="col" key={header}>{header}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {tableRows.map((row, index) => (
+              <tr key={index}>
+                {tableHeaders.map((header) => (
+                  <td key={`${header}-${index}`}>{row[header]}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    };
+
+    return (
+      <div className="container">
+        <h1>SolrQuest</h1>
+        <div className="row">
+          <div className="col">
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label htmlFor="text">Enter your question:</label>
+                <textarea id="text" name="text" className="form-control" value={formData.text} onChange={handleChange} />
+              </div>
+              <button type="submit" className="btn btn-primary">Submit</button>
+            </form>
+          </div>
+        </div>
+
+        <div className="row mt-5">
+          <div className="col d-flex justify-content-center">
+            {isLoading && <Loader />}
+
+            {responseData && !isLoading && renderTableData()}
+
+            {error && !isLoading && (
+              <div className="error">
+                <h2>Error:</h2>
+                <p>{error}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+    );
+  }
+
+
+  const root = createRoot(document.getElementById('root'));
+  root.render(
+    <StrictMode>
+      <App />
+    </StrictMode>
+  );
+</script>
+
+</html>
